@@ -25,11 +25,11 @@ class Dataset(object):
         self.color_channels = color_channels
         self.shuffle = shuffle
         self.data_type = data_type
-        self.gray_img_names = os.listdir(gray_dir)
+        self.gray_img_names = [gray_img for gray_img in os.listdir(gray_dir) if gray_img.endswith('.png')]
         if color_dir is None:
             self.color_img_names = None
         else:
-            self.color_img_names = os.listdir(color_dir)
+            self.color_img_names = [color_img for color_img in os.listdir(color_dir) if color_img.endswith('.png')]
 
     # Convert a single image to numpy array with shape 1 x H x W x C
     def img_to_np(self, filename, img_type):
