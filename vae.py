@@ -40,12 +40,12 @@ def encoder(gray_imgs, latent_dim, conv_filters=[32,16,8], kernel_sizes=[3,3,3],
     latent_samples = latent_mean + tf.multiply(epsilon, latent_sd)
     return latent_samples, latent_mean, latent_sd
 
-def test_encoder():
+def test_encoder(device='/gpu:0'):
     """Unit test to for the encoder method. Check for output dimensions"""
     tf.reset_default_graph()
     B, H, W, C = 64, 256, 256, 1
     latent_dim = 16
-    with tf.device('/cpu:0'):
+    with tf.device(device):
         gray_imgs = tf.zeros((B, H, W, C))
         latent_samples, latent_mean, latent_sd = encoder(gray_imgs, latent_dim)
     with tf.Session() as sess:
@@ -56,8 +56,8 @@ def test_encoder():
         print('latent_mean shape: ' + str(latent_mean_np.shape))
         print('latent_sd shape: ' + str(latent_sd_np.shape))
 
-def decoder(latent_samples, input_dim, output_dim=256, input_channels=1, output_channels=4, deconv_filters=[8,16,32], 
-            kernel_sizes=[3,3,3], deconv_strides=[1,2,2], act=tf.nn.relu, 
+def decoder(latent_samples, input_dim, output_dim=500, input_channels=1, output_channels=4, deconv_filters=[4,8,16], 
+            kernel_sizes=[3,3,3], deconv_strides=[1,1,1], act=tf.nn.relu, 
             initializer=tf.contrib.layers.xavier_initializer()):
     """
     Decode the latent samples into output color images
@@ -81,13 +81,13 @@ def decoder(latent_samples, input_dim, output_dim=256, input_channels=1, output_
                         kernel_initializer=initializer)
     x = tf.reshape(x, [-1, input_dim, input_dim, input_channels])
     x = tf.layers.conv2d_transpose(inputs=x, filters=deconv_filters[0], kernel_size=kernel_sizes[0], 
-                                   strides=deconv_strides[0], padding='valid', activation=act, 
+                                   strides=deconv_strides[0], padding='same', activation=act, 
                                    kernel_initializer=initializer)
     x = tf.layers.conv2d_transpose(inputs=x, filters=deconv_filters[1], kernel_size=kernel_sizes[1], 
-                                   strides=deconv_strides[1], padding='valid', activation=act, 
+                                   strides=deconv_strides[1], padding='same', activation=act, 
                                    kernel_initializer=initializer)
     x = tf.layers.conv2d_transpose(inputs=x, filters=deconv_filters[2], kernel_size=kernel_sizes[2], 
-                                   strides=deconv_strides[2], padding='valid', activation=act, 
+                                   strides=deconv_strides[2], padding='same', activation=act, 
                                    kernel_initializer=initializer)
     x = tf.contrib.layers.flatten(x)
     x = tf.layers.dense(inputs=x, units=output_dim*output_dim*output_channels, activation=act, 
@@ -95,13 +95,13 @@ def decoder(latent_samples, input_dim, output_dim=256, input_channels=1, output_
     color_imgs = tf.reshape(x, [-1, output_dim, output_dim, output_channels])
     return color_imgs
 
-def test_decoder():
+def test_decoder(device='/gpu:0'):
     """Unit test to for the decoder method. Check for output dimensions"""
     tf.reset_default_graph()
     B = 64
-    latent_dim = 16
-    input_dim, output_dim, input_channels, output_channels = 32, 128, 1, 4
-    with tf.device('/cpu:0'):
+    latent_dim = 8
+    input_dim, output_dim, input_channels, output_channels = 4, 500, 1, 4
+    with tf.device(device):
         latent_samples = tf.zeros((B, latent_dim))
         color_imgs = decoder(latent_samples, input_dim, output_dim, input_channels, output_channels)
     with tf.Session() as sess:
