@@ -33,7 +33,7 @@ def compare_hist_intersection(img1, img2):
         channel_intersections.append(total)
     return np.average(channel_intersections)
 
-def evaluate_model(sess, graph_gray, graph_color, graph_training, graph_D_loss, graph_G_loss, graph_G_sample, 
+def evaluate_model(sess, graph_gray, graph_color, graph_training, graph_D_loss, graph_G_loss, graph_img_loss, graph_G_sample, 
     dataset, log_filename, log_note, csv_filename, output_imgs=False, img_dir=None):
     """
     Evaluate the GAN model performance on a given dataset.
@@ -45,6 +45,7 @@ def evaluate_model(sess, graph_gray, graph_color, graph_training, graph_D_loss, 
     - graph_training: TensorFlow placeholder for is_training
     - graph_D_loss: TensorFlow node for D_loss
     - graph_G_loss: TensorFlow node for G_loss
+    - graph_img_loss: TensorFlow node for img_loss
     - graph_G_sample: TensorFlow node for G_sample
     - dataset: Dataset object for the data set to evaluate on. The attribute shuffle should be False.
     - log_filename: String for the file name of the performance log file 
@@ -62,6 +63,7 @@ def evaluate_model(sess, graph_gray, graph_color, graph_training, graph_D_loss, 
     assert dataset.shuffle == False, "shuffle should be turned off for the dataset"
     D_loss_list = []
     G_loss_list = []
+    img_loss_list = []
     ssim_list = []
     psnr_list = []
     pearson_list = []
@@ -76,10 +78,11 @@ def evaluate_model(sess, graph_gray, graph_color, graph_training, graph_D_loss, 
         color_processed_np = preprocess(color_img_np)
         feed_dict = {graph_gray: gray_processed_np, graph_color: color_processed_np, graph_training: False}
         D_loss_np = sess.run(graph_D_loss, feed_dict=feed_dict)
-        G_loss_np = sess.run(graph_G_loss, feed_dict=feed_dict)
+        G_loss_np, img_loss_np = sess.run([graph_G_loss, graph_img_loss], feed_dict=feed_dict)
 
         D_loss_list.append(D_loss_np)
         G_loss_list.append(G_loss_np)
+        img_loss_list.append(img_loss_np)
 
         samples_np = sess.run(graph_G_sample, feed_dict=feed_dict)
         samples_np = postprocess(samples_np)
@@ -140,6 +143,7 @@ def evaluate_model(sess, graph_gray, graph_color, graph_training, graph_D_loss, 
 
     D_loss_mean = np.mean(D_loss_list)
     G_loss_mean = np.mean(G_loss_list)
+    img_loss_mean = np.mean(img_loss_list)
 
     # Save the results to the log file
     if not os.path.isfile(log_filename):
@@ -151,6 +155,7 @@ def evaluate_model(sess, graph_gray, graph_color, graph_training, graph_D_loss, 
     with open(log_filename, 'a') as log_handle:
         log_handle.write('D loss: %0.4f\n' % (D_loss_mean))
         log_handle.write('G loss: %0.4f\n' % (G_loss_mean))
+        log_handle.write('img loss: %0.4f\n' % (img_loss_mean))
 
         log_handle.write('SSIM mean: %0.4f  std: %0.4f\n' % (ssim_mean, ssim_std))
         log_handle.write('PSNR mean: %0.4f  std: %0.4f\n' % (psnr_mean, psnr_std))
