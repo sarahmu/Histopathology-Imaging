@@ -341,4 +341,52 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
             print('')
     return
 
-# def restore_gan(eval_data_dir, output_dir, start_epoch, num_epochs, batch_size=16, img_dim=256)
+def evaluate_trained_gan(meta_file, checkpoint_path, eval_data_dir, output_dir, num_eval_img=100, batch_size=16, img_dim=256):
+    # Set up output directories    
+    eval_dir = output_dir + 'eval_results/'
+    eval_img_dir = eval_dir + 'imgs/'
+    if not os.path.exists(eval_dir):
+        os.makedirs(eval_dir)
+    if not os.path.exists(eval_img_dir):
+        os.makedirs(eval_img_dir)
+
+    # Output file paths
+    eval_log_file = eval_dir + 'eval_log.txt'
+    eval_csv_file = eval_dir + 'eval_metrics.csv'
+
+    # Initialize the log file
+    start_msg = local_clock() + '  Started evaluating model.'
+    with open(eval_log_file, 'w') as handle:
+        handle.write(start_msg)
+        handle.write('meta file: ' + meta_file + '\n')
+        handle.write('checkpoint path: ' + checkpoint_path + '\n')
+        handle.write('eval data directory: ' + eval_data_dir + '\n')
+
+    # Get the data set
+    eval_gray_dir = eval_data_dir + 'gray/'
+    eval_color_dir = eval_data_dir + 'color/'
+    eval_data = Dataset(eval_gray_dir, eval_color_dir, batch_size, img_dim, shuffle=False)
+
+    # Restore the trained session and evaluate on the evlation dataset
+    with tf.Session() as sess:
+        new_saver = tf.train.import_meta_graph(meta_file)
+        new_saver.restore(sess, checkpoint_path)
+
+        # Restore the variables
+        is_training = tf.get_collection('is_training')[0]
+        gray_img = tf.get_collection('gray_img')[0]
+        color_img = tf.get_collection('color_img')[0]
+        G_sample = tf.get_collection('G_sample')[0]
+        D_loss = tf.get_collection('D_loss')[0]
+        G_loss = tf.get_collection('G_loss')[0]
+        img_loss = tf.get_collection('img_loss')[0]
+        mse = tf.get_collection('mse')[0]
+        D_train_op = tf.get_collection('D_train_op')[0]
+        G_train_op = tf.get_collection('G_train_op')[0]
+
+        evaluate_model(sess=sess, graph_gray=gray_img, graph_color=color_img, graph_training=is_training, 
+                       graph_D_loss=D_loss, graph_G_loss=G_loss, graph_img_loss=img_loss, 
+                       graph_G_sample=G_sample, dataset=eval_data, 
+                       log_filename=eval_log_file, log_note='Finished evaluating.', csv_filename=eval_csv_file, 
+                       output_imgs=True, img_dir=eval_img_dir, num_eval_img=num_eval_img)
+    return
