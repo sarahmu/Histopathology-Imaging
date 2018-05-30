@@ -251,6 +251,17 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
         with tf.control_dependencies(G_update_ops):
             G_train_op = G_solver.minimize(G_loss + img_loss, var_list=G_vars)
 
+        # Remember the nodes we want to run in the future
+        tf.add_to_collection('is_training', is_training)
+        tf.add_to_collection('gray_img', gray_img)
+        tf.add_to_collection('color_img', color_img)
+        tf.add_to_collection('G_sample', G_sample)
+        tf.add_to_collection('D_loss', D_loss)
+        tf.add_to_collection('G_loss', G_loss)
+        tf.add_to_collection('img_loss', img_loss)
+        tf.add_to_collection('D_train_op', D_train_op)
+        tf.add_to_collection('G_train_op', G_train_op)
+
     # Training loop
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
