@@ -155,6 +155,14 @@ def l2_loss(fake_imgs, real_imgs, reg=128):
     loss = 2* tf.nn.l2_loss(fake_flat - real_flat)
     return reg * loss
 
+def calculate_mse(fake_imgs, real_imgs, post_process=True):
+    if post_process:
+        fake_imgs = postprocess(fake_imgs)
+        real_imgs = postprocess(real_imgs)
+    fake_flat = tf.contrib.layers.flatten(fake_imgs)
+    real_flat = tf.contrib.layers.flatten(real_imgs)
+    return tf.losses.mean_squared_error(real_flat, fake_flat)
+
 def get_solvers(D_lr=2e-4, G_lr=2e-4, beta1=0.5):
     """Create solvers for GAN training.
     
@@ -242,6 +250,9 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
         D_loss, G_loss = gan_loss(logits_real, logits_fake)
         img_loss = loss_method(G_sample, color_img, reg=reg)
 
+        # Calculate the MSE between generated images and original color images
+        mse = calculate_mse(G_sample, color_img)
+
         # Set up the training operations
         D_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, 'discriminator')
         with tf.control_dependencies(D_update_ops):
@@ -259,6 +270,7 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
         tf.add_to_collection('D_loss', D_loss)
         tf.add_to_collection('G_loss', G_loss)
         tf.add_to_collection('img_loss', img_loss)
+        tf.add_to_collection('mse', mse)
         tf.add_to_collection('D_train_op', D_train_op)
         tf.add_to_collection('G_train_op', G_train_op)
 
@@ -273,10 +285,11 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
                 feed_dict = {gray_img: gray_processed_np, color_img: color_processed_np, is_training: True}
                 _, D_loss_np = sess.run([D_train_op, D_loss], feed_dict=feed_dict)
                 _, G_loss_np, img_loss_np = sess.run([G_train_op, G_loss, img_loss], feed_dict=feed_dict)
+                mse_np = sess.run(mse, feed_dict=feed_dict)
 
             # Save the results to the train log file
             epoch_train_time = local_clock() + '\n'
-            epoch_train_msg = 'Epoch %d  D loss: %0.4f  G loss: %0.4f  img loss: %0.4f' % (epoch, D_loss_np, G_loss_np, img_loss_np)
+            epoch_train_msg = 'Epoch %d  D loss: %0.4f  G loss: %0.4f  img loss: %0.4f  MSE: %0.4f' % (epoch, D_loss_np, G_loss_np, img_loss_np, mse_np)
             print(local_clock() + '  ' + epoch_train_msg)
             epoch_train_msg += '\n'
             with open(train_log_file, 'a') as handle:
@@ -326,3 +339,5 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
             print(local_clock() + '  Finished epoch %d' % (epoch))
             print('')
     return
+
+# def restore_gan(eval_data_dir, output_dir, start_epoch, num_epochs, batch_size=16, img_dim=256)
