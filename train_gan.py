@@ -46,9 +46,10 @@ if __name__ == '__main__':
           ', --D_lr=' + str(D_lr) + ', --G_lr=' + str(G_lr) + \
           ', --beta1=' + str(beta1) + ', --reg=' + str(reg) + ', --num_epochs=' + str(num_epochs) + \
           ', --loss=' + loss + ', --batch_size=' + str(batch_size) + ', --eval_val=' + str(eval_val) + \
-          ', --save_eval_img=' + str(save_eval_img) + ', --device=' + device + ', --num_eval_img' + str(num_eval_img))
+          ', --save_eval_img=' + str(save_eval_img) + ', --device=' + device + ', --num_eval_img=' + str(num_eval_img))
 
     train_gan(train_data_dir=train_data_dir, val_data_dir=val_data_dir, output_dir=output_dir, 
               D_lr=D_lr, G_lr=G_lr, beta1=beta1, reg=reg, num_epochs=num_epochs, loss=loss, 
               batch_size=batch_size, eval_val=eval_val, save_eval_img=save_eval_img, device=device, 
               num_eval_img=num_eval_img)
+    print('Finished training GAN!')
