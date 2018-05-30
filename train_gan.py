@@ -17,7 +17,7 @@ if __name__ == '__main__':
         elif opt in ('-v', '--val_data_dir'):
             val_data_dir = arg
         elif opt in ('-o', '--output_dir'):
-            master_dest_dir = arg
+            output_dir = arg
         elif opt in ('-d', '--D_lr'):
             D_lr = float(arg)
         elif opt in ('-g', '--G_lr'):
@@ -38,6 +38,7 @@ if __name__ == '__main__':
             save_eval_img = True
         elif opt in ('-c', '--device'):
             device = arg
+
     print('Running train_gan.py with parameters: --train_data_dir=' + train_data_dir + \
           ', --val_data_dir=' + val_data_dir + ', --output_dir=' + output_dir + \
           ', --D_lr=' + str(D_lr) + ', --G_lr=' + str(G_lr) + \
