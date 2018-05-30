@@ -2,6 +2,7 @@ import time
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 import matplotlib.gridspec as gridspec
 
 def local_clock(shift=-25200):
