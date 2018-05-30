@@ -121,14 +121,14 @@ def gan_loss(logits_real, logits_fake):
     D_loss = D_real_loss + D_fake_loss
     return D_loss, G_loss
 
-def l1_loss(fake_imgs, real_imgs, reg=127.5):
+def l1_loss(fake_imgs, real_imgs, reg=128):
     """
     Compute the L1 loss between fake images and real images.
     
     Inputs:
     - fake_imgs: Tensor with shape [batch_size, H, W, C], output of generator
     - real_imgs: Tensor with shape [batch_size, H, W, C], fed into the graph
-    - reg: Float for the regularization constant. Default to 127.5 for RGBA scheme (0-255).
+    - reg: Float for the regularization constant. Default to 128 for RGBA scheme (0-255).
     
     Outputs:
     - loss: L1 loss scalar
@@ -136,6 +136,23 @@ def l1_loss(fake_imgs, real_imgs, reg=127.5):
     fake_flat = tf.contrib.layers.flatten(fake_imgs)
     real_flat = tf.contrib.layers.flatten(real_imgs)
     loss = tf.reduce_mean(tf.abs(fake_flat - real_flat))
+    return reg * loss
+
+def l2_loss(fake_imgs, real_imgs, reg=128):
+    """
+    Compute the L2 loss between fake images and real images.
+    
+    Inputs:
+    - fake_imgs: Tensor with shape [batch_size, H, W, C], output of generator
+    - real_imgs: Tensor with shape [batch_size, H, W, C], fed into the graph
+    - reg: Float for the regularization constant. Default to 128 for RGBA scheme (0-255).
+    
+    Outputs:
+    - loss: L1 loss scalar
+    """
+    fake_flat = tf.contrib.layers.flatten(fake_imgs)
+    real_flat = tf.contrib.layers.flatten(real_imgs)
+    loss = 2* tf.nn.l2_loss(fake_flat - real_flat)
     return reg * loss
 
 def get_solvers(D_lr=2e-4, G_lr=2e-4, beta1=0.5):
@@ -155,7 +172,13 @@ def get_solvers(D_lr=2e-4, G_lr=2e-4, beta1=0.5):
     return D_solver, G_solver
 
 def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, num_epochs, 
-	batch_size=16, eval_val=True, save_eval_img=True, device='/gpu:0', img_dim=256):
+              loss='l2', batch_size=16, eval_val=True, save_eval_img=True, device='/gpu:0', img_dim=256):
+    # Set up the image loss function
+    if loss == 'l2':
+        loss_method = l2_loss
+    elif loss == 'l1':
+        loss_method = l1_loss
+
     # Set up output directories    
     val_dir = output_dir + 'val_results/'
     val_img_dir = val_dir + 'imgs/'
@@ -171,10 +194,10 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
         os.makedirs(trained_sess_dir)
 
     # Output file paths
-    train_log_file = train_dir + 'train_log_Dlr={}_Glr={}_beta1={}_reg={}.txt'.format(D_lr, G_lr, beta1, reg)
+    train_log_file = train_dir + 'train_log_Dlr={}_Glr={}_beta1={}_reg={}_loss={}.txt'.format(D_lr, G_lr, beta1, reg, loss)
     train_img_file = train_dir + 'train_gen_examples_epoch_'
-    val_log_file = val_dir + 'val_log_Dlr={}_Glr={}_beta1={}_reg={}.txt'.format(D_lr, G_lr, beta1, reg)
-    val_csv_file = val_dir + 'val_metrics_Dlr={}_Glr={}_beta1={}_reg={}'.format(D_lr, G_lr, beta1, reg)
+    val_log_file = val_dir + 'val_log_Dlr={}_Glr={}_beta1={}_reg={}_loss={}.txt'.format(D_lr, G_lr, beta1, reg, loss)
+    val_csv_file = val_dir + 'val_metrics_Dlr={}_Glr={}_beta1={}_reg={}_loss={}'.format(D_lr, G_lr, beta1, reg, loss)
 
     # Initialize the log files
     start_msg = local_clock() + '  Started training model with D_lr={}, G_lr={}, beta1={}, reg={}\n'.format(D_lr, G_lr, beta1, reg)
@@ -217,7 +240,7 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
 
         # Compute the losses
         D_loss, G_loss = gan_loss(logits_real, logits_fake)
-        img_loss = l1_loss(G_sample, color_img, reg=reg)
+        img_loss = loss_method(G_sample, color_img, reg=reg)
 
         # Set up the training operations
         D_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, 'discriminator')
