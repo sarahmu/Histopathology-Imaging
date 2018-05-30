@@ -180,7 +180,7 @@ def get_solvers(D_lr=2e-4, G_lr=2e-4, beta1=0.5):
     return D_solver, G_solver
 
 def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, num_epochs, 
-              loss='l2', batch_size=16, eval_val=True, save_eval_img=True, device='/gpu:0', img_dim=256):
+              loss='l2', batch_size=16, eval_val=True, save_eval_img=True, num_eval_img=100, device='/gpu:0', img_dim=256):
     # Set up the image loss function
     if loss == 'l2':
         loss_method = l2_loss
@@ -329,7 +329,8 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
                                log_note=val_log_note, 
                                csv_filename=epoch_val_csv, 
                                output_imgs=save_eval_img, 
-                               img_dir=epoch_val_img_dir)
+                               img_dir=epoch_val_img_dir, 
+                               num_eval_img=num_eval_img)
 
             # Save the session when the epoch is done
             saver = tf.train.Saver()

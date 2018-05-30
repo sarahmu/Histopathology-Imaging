@@ -35,7 +35,7 @@ def compare_hist_intersection(img1, img2):
     return np.average(channel_intersections)
 
 def evaluate_model(sess, graph_gray, graph_color, graph_training, graph_D_loss, graph_G_loss, graph_img_loss, graph_G_sample, 
-    dataset, log_filename, log_note, csv_filename, output_imgs=False, img_dir=None):
+    dataset, log_filename, log_note, csv_filename, output_imgs=False, img_dir=None, num_eval_img=100):
     """
     Evaluate the GAN model performance on a given dataset.
     
@@ -94,7 +94,7 @@ def evaluate_model(sess, graph_gray, graph_color, graph_training, graph_D_loss, 
             sample_img = samples_np[i,:,:,:] # sample image that has been postprocessed
 
             # Save the generated image
-            if output_imgs and img_dir != None:
+            if output_imgs and img_dir != None and counter < num_eval_img:
                 save_image(sample_img, img_dir + sample_imgname, post_process=False)
 
             true_img = color_img_np[i,:,:,:] # color image that has not been preprocessed

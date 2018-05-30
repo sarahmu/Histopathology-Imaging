@@ -4,10 +4,10 @@ from gan import train_gan
 if __name__ == '__main__':
     try:
         opts, args = getopt.getopt(sys.argv[1:], 
-                                   't:v:o:d:g:b:r:n:l:s:eac:', 
+                                   't:v:o:d:g:b:r:n:l:s:eac:i:', 
                                    ['train_data_dir=', 'val_data_dir=', 'output_dir=', 
                                     'D_lr=', 'G_lr=', 'beta1=', 'reg=', 'num_epochs=', 'loss=', 'batch_size=', 
-                                    'eval_val', 'save_eval_img', 'device='])
+                                    'eval_val', 'save_eval_img', 'device=', 'num_eval_img='])
     except getopt.GetoptError:
         print ('train_gan.py -t <train_data_dir> -v <val_data_dir> -o <output_dir> -d <D_lr> -g <G_lr> -b <beta1> -r <reg> -n <num_epochs> -l <loss> -s <batch_size> -e -a -c <device>')
         sys.exit(2)
@@ -38,14 +38,17 @@ if __name__ == '__main__':
             save_eval_img = True
         elif opt in ('-c', '--device'):
             device = arg
+        elif opt in ('-i', '--num_eval_img'):
+            num_eval_img = int(arg)
 
     print('Running train_gan.py with parameters: --train_data_dir=' + train_data_dir + \
           ', --val_data_dir=' + val_data_dir + ', --output_dir=' + output_dir + \
           ', --D_lr=' + str(D_lr) + ', --G_lr=' + str(G_lr) + \
           ', --beta1=' + str(beta1) + ', --reg=' + str(reg) + ', --num_epochs=' + str(num_epochs) + \
           ', --loss=' + loss + ', --batch_size=' + str(batch_size) + ', --eval_val=' + str(eval_val) + \
-          ', --save_eval_img=' + str(save_eval_img) + ', --device=' + device)
+          ', --save_eval_img=' + str(save_eval_img) + ', --device=' + device + ', --num_eval_img' + str(num_eval_img))
 
     train_gan(train_data_dir=train_data_dir, val_data_dir=val_data_dir, output_dir=output_dir, 
               D_lr=D_lr, G_lr=G_lr, beta1=beta1, reg=reg, num_epochs=num_epochs, loss=loss, 
-              batch_size=batch_size, eval_val=eval_val, save_eval_img=save_eval_img, device=device)
+              batch_size=batch_size, eval_val=eval_val, save_eval_img=save_eval_img, device=device, 
+              num_eval_img=num_eval_img)
