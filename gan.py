@@ -209,10 +209,13 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
 
     # Initialize the log files
     start_msg = local_clock() + '  Started training model with D_lr={}, G_lr={}, beta1={}, reg={}\n'.format(D_lr, G_lr, beta1, reg)
+    print(start_msg)
     with open(train_log_file, 'w') as handle:
         handle.write(start_msg)
+        handle.write('device={}\n'.format(device))
     with open(val_log_file, 'w') as handle:
         handle.write(start_msg)
+        handle.write('device={}\n'.format(device))
 
     # Get the data set
     train_gray_dir = train_data_dir + 'gray/'
@@ -334,8 +337,9 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
 
             # Save the session when the epoch is done
             saver = tf.train.Saver()
-            sess_name = trained_sess_dir + 'gan_epoch' + str(epoch)
-            saver.save(sess, sess_name)
+            sess_name = 'Dlr={}_Glr={}_beta1={}_reg={}_loss={}_epoch_{}'.format(D_lr, G_lr, beta1, reg, loss, epoch)
+            sess_file = trained_sess_dir + sess_name
+            saver.save(sess, sess_file)
 
             print(local_clock() + '  Finished epoch %d' % (epoch))
             print('')
@@ -389,4 +393,133 @@ def evaluate_trained_gan(meta_file, checkpoint_path, eval_data_dir, output_dir, 
                        graph_G_sample=G_sample, dataset=eval_data, 
                        log_filename=eval_log_file, log_note='Finished evaluating.', csv_filename=eval_csv_file, 
                        output_imgs=True, img_dir=eval_img_dir, num_eval_img=num_eval_img)
+    return
+
+def resume_train_gan(meta_file, checkpoint_path, train_data_dir, val_data_dir, output_dir, num_epochs,  
+                     batch_size=16, eval_val=True, save_eval_img=True, num_eval_img=100, device='/gpu:0', img_dim=256):
+    # Set up output directories    
+    val_dir = output_dir + 'val_results/'
+    val_img_dir = val_dir + 'imgs/'
+    train_dir = output_dir + 'train_results/'
+    trained_sess_dir = output_dir + 'trained_sess/'
+    if not os.path.exists(val_dir):
+        os.makedirs(val_dir)
+    if not os.path.exists(val_img_dir):
+        os.makedirs(val_img_dir)
+    if not os.path.exists(train_dir):
+        os.makedirs(train_dir)
+    if not os.path.exists(trained_sess_dir):
+        os.makedirs(trained_sess_dir)
+
+    # Get the trained model configuration
+    configs = checkpoint_path.split('/')[-1]
+    pre_epoch = int(configs.split('_')[-1])
+    params_str = configs.split('_')[:-2]
+    params_str = '_'.join(params_str)
+
+    # Output file paths
+    train_log_file = train_dir + 'train_log_{}.txt'.format(params_str)
+    train_img_file = train_dir + 'train_gen_examples_epoch_'
+    val_log_file = val_dir + 'val_log_{}.txt'.format(params_str)
+    val_csv_file = val_dir + 'val_metrics_{}'.format(params_str)
+
+    # Initialize the log files
+    start_msg = local_clock() + '  Resumed training model with {} and {} epochs\n'.format(params_str, pre_epoch)
+    print(start_msg)
+    with open(train_log_file, 'w') as handle:
+        handle.write(start_msg)
+        handle.write('device={}\n'.format(device))
+    with open(val_log_file, 'w') as handle:
+        handle.write(start_msg)
+        handle.write('device={}\n'.format(device))
+
+    # Get the data set
+    train_gray_dir = train_data_dir + 'gray/'
+    train_color_dir = train_data_dir + 'color/'
+    val_gray_dir = val_data_dir + 'gray/'
+    val_color_dir = val_data_dir + 'color/'
+    train_data = Dataset(train_gray_dir, train_color_dir, batch_size, img_dim, shuffle=True)
+    train_example_data = Dataset(train_gray_dir, train_color_dir, batch_size, img_dim, shuffle=False)
+    val_data = Dataset(val_gray_dir, val_color_dir, batch_size, img_dim, shuffle=False)
+
+    # Restore the trained session and evaluate on the evlation dataset
+    with tf.Session() as sess:
+        new_saver = tf.train.import_meta_graph(meta_file)
+        new_saver.restore(sess, checkpoint_path)
+
+        # Restore the variables
+        is_training = tf.get_collection('is_training')[0]
+        gray_img = tf.get_collection('gray_img')[0]
+        color_img = tf.get_collection('color_img')[0]
+        G_sample = tf.get_collection('G_sample')[0]
+        D_loss = tf.get_collection('D_loss')[0]
+        G_loss = tf.get_collection('G_loss')[0]
+        img_loss = tf.get_collection('img_loss')[0]
+        mse = tf.get_collection('mse')[0]
+        D_train_op = tf.get_collection('D_train_op')[0]
+        G_train_op = tf.get_collection('G_train_op')[0]
+
+        for epoch in range(pre_epoch + 1, pre_epoch + 1 + num_epochs):
+            print(local_clock() + '  Started epoch %d' % (epoch))
+            for t, (gray_img_np, color_img_np) in enumerate(train_data):
+                gray_processed_np = preprocess(gray_img_np)
+                color_processed_np = preprocess(color_img_np)
+                feed_dict = {gray_img: gray_processed_np, color_img: color_processed_np, is_training: True}
+                _, D_loss_np = sess.run([D_train_op, D_loss], feed_dict=feed_dict)
+                _, G_loss_np, img_loss_np = sess.run([G_train_op, G_loss, img_loss], feed_dict=feed_dict)
+                mse_np = sess.run(mse, feed_dict=feed_dict)
+
+            # Save the results to the train log file
+            epoch_train_time = local_clock() + '\n'
+            epoch_train_msg = 'Epoch %d  D loss: %0.4f  G loss: %0.4f  img loss: %0.4f  MSE: %0.4f' % (epoch, D_loss_np, G_loss_np, img_loss_np, mse_np)
+            print(local_clock() + '  ' + epoch_train_msg)
+            epoch_train_msg += '\n'
+            with open(train_log_file, 'a') as handle:
+                handle.write('\n')
+                handle.write(epoch_train_time)
+                handle.write(epoch_train_msg)
+
+            # Save examples of generated images
+            for j, (gray_example_np, color_example_np) in enumerate(train_example_data):
+                gray_example_processed_np = preprocess(gray_example_np)
+                color_example_processed_np = preprocess(color_example_np)
+                break # only load the first batch as examples
+            example_feed_dict = {gray_img: gray_example_processed_np, 
+                                 color_img: color_example_processed_np, 
+                                 is_training: False}
+            gen_example_np = sess.run(G_sample, feed_dict=example_feed_dict)
+            gen_example_np = postprocess(gen_example_np)
+            show_images(gen_example_np, post_process=False, save=True, filepath=train_img_file + str(epoch) + '.png')
+
+            # If true, evaluate on the validation data set
+            if eval_val:
+                val_log_note = 'Epoch ' + str(epoch)
+                epoch_val_img_dir = val_img_dir + 'epoch' + str(epoch) + '/'
+                if not os.path.exists(epoch_val_img_dir):
+                    os.makedirs(epoch_val_img_dir)
+                epoch_val_csv = val_csv_file + '_epoch' + str(epoch) + '.csv'
+                evaluate_model(sess=sess,
+                               graph_gray=gray_img, 
+                               graph_color=color_img, 
+                               graph_training=is_training,
+                               graph_D_loss=D_loss, 
+                               graph_G_loss=G_loss, 
+                               graph_img_loss=img_loss, 
+                               graph_G_sample=G_sample, 
+                               dataset=val_data, 
+                               log_filename=val_log_file, 
+                               log_note=val_log_note, 
+                               csv_filename=epoch_val_csv, 
+                               output_imgs=save_eval_img, 
+                               img_dir=epoch_val_img_dir, 
+                               num_eval_img=num_eval_img)
+
+            # Save the session when the epoch is done
+            saver = tf.train.Saver()
+            sess_name = params_str + '_epoch_' + str(epoch)
+            sess_file = trained_sess_dir + sess_name
+            saver.save(sess, sess_file)
+
+            print(local_clock() + '  Finished epoch %d' % (epoch))
+            print('')
     return
