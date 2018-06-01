@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 import matplotlib.gridspec as gridspec
+from PIL import Image
 
 def local_clock(shift=-25200):
 	return time.asctime(time.localtime(time.time() + shift))
@@ -50,17 +51,24 @@ def show_images(images, post_process=False, save=False, filepath=None):
     plt.close(fig)
     return
 
-def save_image(image, filepath, post_process=False, width=4, height=4):
-    H, W, C = image.shape
+def save_image(image, filepath, post_process=False):
     if post_process:
         image = postprocess(image)
     image = image.astype(np.uint8)
-    fig = plt.figure(figsize=(width, height))
-    plt.axis('off')
-    if C == 1:
-        plt.imshow(image.reshape((H, W)), camp='gray')
-    else:
-        plt.imshow(image)
-    fig.savefig(filepath)
-    plt.close(fig)
-    return
+    image_object = Image.fromarray(image)
+    image_object.save(filepath)
+
+# def save_image(image, filepath, post_process=False, width=4, height=4):
+#     H, W, C = image.shape
+#     if post_process:
+#         image = postprocess(image)
+#     image = image.astype(np.uint8)
+#     fig = plt.figure(figsize=(width, height))
+#     plt.axis('off')
+#     if C == 1:
+#         plt.imshow(image.reshape((H, W)), camp='gray')
+#     else:
+#         plt.imshow(image)
+#     fig.savefig(filepath)
+#     plt.close(fig)
+#     return
