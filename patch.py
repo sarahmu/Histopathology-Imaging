@@ -27,8 +27,14 @@ def get_white_trans_fracs(patch_np):
 	frac_trans = np.sum(transparent) / num_pixels
 	return frac_white, frac_trans
 
+def get_black_fracs(patch_np):
+	black = np.mean(patch_np, 2) < 64
+	num_pixels = patch_np.shape[0] * patch_np.shape[1]
+	frac_black = np.sum(black) / num_pixels
+	return frac_black
+
 def patch_slide(slide_file, color_dir, gray_dir, log_file, white_threshold=0.95, trans_threshold=0.1, patch_size=224, 
-	limit=5000):
+	limit=5000, black_threshold=0.05):
 	"""
 	Break a whole-slide image into patches. Save the original patches and the gray-scale patches with 
 	useful content to different directories.
@@ -69,7 +75,8 @@ def patch_slide(slide_file, color_dir, gray_dir, log_file, white_threshold=0.95,
 			patch = slide.read_region((x,y), 0, (patch_size,patch_size))
 			patch_np = np.array(patch, dtype='uint8')
 			frac_white, frac_trans = get_white_trans_fracs(patch_np)
-			if frac_white < white_threshold and frac_trans < trans_threshold:
+			frac_black = get_black_fracs(patch_np)
+			if frac_white < white_threshold and frac_trans < trans_threshold and frac_black < black_threshold:
 				patch_name = patient_id + '_' + node_id + '_' + str(patch_idx) + '_' + str(x) + '_' + str(y) + '.png'
 				gray_patch = patch.convert('L')
 				patch.save(color_dir + patch_name)
