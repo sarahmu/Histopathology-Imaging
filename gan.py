@@ -9,6 +9,8 @@ from data_loader import Dataset
 from utils import local_clock, preprocess, postprocess, show_images, save_image
 from evaluate import evaluate_model
 
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
 # Generator
 def generator(x, is_training, output_channels=4, filters = [64,64,128,256,512,512,512,512], kernel_size = 4, stride = 2):
     with tf.variable_scope('generator'):
