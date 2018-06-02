@@ -261,11 +261,11 @@ def train_gan(train_data_dir, val_data_dir, output_dir, D_lr, G_lr, beta1, reg, 
         # Set up the training operations
         D_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, 'discriminator')
         with tf.control_dependencies(D_update_ops):
-            D_train_op = D_solver.minimize(D_loss, var_list=D_vars)
+            D_train_op = D_solver.minimize(0*D_loss, var_list=D_vars)
 
         G_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, 'generator')
         with tf.control_dependencies(G_update_ops):
-            G_train_op = G_solver.minimize(G_loss + img_loss, var_list=G_vars)
+            G_train_op = G_solver.minimize(0*G_loss + img_loss, var_list=G_vars)
 
         # Remember the nodes we want to run in the future
         tf.add_to_collection('is_training', is_training)
