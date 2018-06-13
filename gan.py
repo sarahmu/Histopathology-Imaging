@@ -98,20 +98,17 @@ def discriminator(x, is_training, filters = [64,128,256,512] , kernel_size = 4, 
         return logit
 
 def gan_loss(logits_real, logits_fake):
-    """Compute the GAN loss.
+    """
+    NOTE: Code adopted from Assignment 3 of Spring 2018 CS231N at Stanford University.
+    Compute the GAN losses.
     
     Inputs:
-    - logits_real: Tensor, shape [batch_size, 1], output of discriminator
-        Unnormalized score that the image is real for each real image
-    - logits_fake: Tensor, shape[batch_size, 1], output of discriminator
-        Unnormalized score that the image is real for each fake image
+    - logits_real: Tensor of shape B x 1, output score of the discriminator for the real images
+    - logits_fake: Tensor of shape B x 1, output score of the discriminator for the fake/generated images
     
-    Returns:
-    - D_loss: discriminator loss scalar
-    - G_loss: generator loss scalar
-    
-    Note: For the discriminator loss, do the averaging separately for
-    its two components, and then add them together (instead of averaging once at the very end).
+    Outputs
+    - D_loss: Float for the discriminator loss
+    - G_loss: Float for the generator loss
     """
     G_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(logits_fake), logits=logits_fake)
     G_loss = tf.reduce_mean(G_loss)
@@ -166,14 +163,16 @@ def calculate_mse(fake_imgs, real_imgs, post_process=True):
     return tf.losses.mean_squared_error(real_flat, fake_flat)
 
 def get_solvers(D_lr=2e-4, G_lr=2e-4, beta1=0.5):
-    """Create solvers for GAN training.
+    """
+    NOTE: Code adopted from Assignment 3 of Spring 2018 CS231N at Stanford University.
+    Create solvers for GAN training.
     
     Inputs:
     - D_lr: learning rate for the discriminator
     - G_lr: learning rate for the generator
     - beta1: beta1 parameter for both solvers (first moment decay)
     
-    Returns:
+    Outputs:
     - D_solver: instance of tf.train.AdamOptimizer with correct learning_rate and beta1
     - G_solver: instance of tf.train.AdamOptimizer with correct learning_rate and beta1
     """
